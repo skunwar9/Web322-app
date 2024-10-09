@@ -21,7 +21,7 @@ storeService.initialize()
     .catch((err) => {
        
         console.error('Error initializing data:', err);
-        process.exit(1);  // Exit the process with a failure code
+        process.exit(1);  
     });
 
 
@@ -65,7 +65,7 @@ app.get('/categories', (req, res) => {
         });
 });
 
-// Custom 404 route for unmatched routes
+
 app.use((req, res) => {
     res.status(404).send("Page Not Found");
 });
