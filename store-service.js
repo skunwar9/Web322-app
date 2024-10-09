@@ -1,13 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
-// Global arrays to store items and categories
+
 let items = [];
 let categories = [];
 
 function initialize() {
     return new Promise((resolve, reject) => {
-        // Read the items.json file
+       
         fs.readFile(path.join(__dirname, 'data', 'items.json'), 'utf8', (err, data) => {
             if (err) {
                 console.error('Error reading items file:', err);
@@ -21,7 +21,7 @@ function initialize() {
             }
 
             try {
-                items = JSON.parse(data);  // Parse items JSON
+                items = JSON.parse(data);  
                 console.log('Successfully parsed items.json');
             } catch (e) {
                 console.error('Error parsing items.json:', e);
@@ -29,7 +29,7 @@ function initialize() {
                 return;
             }
 
-            // Read the categories.json file
+            
             fs.readFile(path.join(__dirname, 'data', 'categories.json'), 'utf8', (err, data) => {
                 if (err) {
                     console.error('Error reading categories file:', err);
@@ -43,9 +43,9 @@ function initialize() {
                 }
 
                 try {
-                    categories = JSON.parse(data);  // Parse categories JSON
+                    categories = JSON.parse(data);  
                     console.log('Successfully parsed categories.json');
-                    resolve();  // Resolve when both files are successfully parsed
+                    resolve();  
                 } catch (e) {
                     console.error('Error parsing categories.json:', e);
                     reject('Error parsing categories.json: ' + e.message);
@@ -55,19 +55,19 @@ function initialize() {
     });
 }
 
-// Function to return all items
+
 function getAllItems() {
     return new Promise((resolve, reject) => {
         if (items.length === 0) {
             console.error('No items found');
             reject('No items found');
         } else {
-            resolve(items);  // Resolve with the full items array
+            resolve(items);  
         }
     });
 }
 
-// Function to return only published items
+
 function getPublishedItems() {
     return new Promise((resolve, reject) => {
         const publishedItems = items.filter(item => item.published === true);
@@ -75,24 +75,24 @@ function getPublishedItems() {
             console.error('No published items found');
             reject('No published items found');
         } else {
-            resolve(publishedItems);  // Resolve with the array of published items
+            resolve(publishedItems);  
         }
     });
 }
 
-// Function to return all categories
+
 function getCategories() {
     return new Promise((resolve, reject) => {
         if (categories.length === 0) {
             console.error('No categories found');
             reject('No categories found');
         } else {
-            resolve(categories);  // Resolve with the full categories array
+            resolve(categories);  
         }
     });
 }
 
-// Export all functions so they can be used in server.js
+
 module.exports = {
     initialize,
     getAllItems,
