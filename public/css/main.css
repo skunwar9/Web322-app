@@ -1,0 +1,41 @@
+/* Basic styles for the body */
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+}
+
+/* Style for the navbar brand */
+.navbar-brand {
+    font-weight: bold;
+    color: #ff6347 !important; /* Tomato color */
+}
+
+/* Custom padding for the main content */
+.container {
+    padding-top: 100px;
+}
+
+/* Style for the about heading */
+.main h2 {
+    font-size: 2rem;
+    color: #333;
+}
+
+/* Style for the article text */
+.main p {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 1.5rem;
+}
+
+/* Right column coming soon section */
+aside h2 {
+    color: #007bff;
+}
+
+/* Coming soon paragraph styling */
+aside p {
+    color: #555;
+}
