@@ -92,10 +92,56 @@ function getCategories() {
     });
 }
 
+function addItem(itemData) {
+    return new Promise((resolve, reject) => {
+        // Set published status to false if undefined
+        itemData.published = itemData.published !== undefined ? itemData.published : false;
+
+        // Assign a new id based on the length of the items array
+        itemData.id = items.length + 1;
+
+        // Add itemData to the items array
+        items.push(itemData);
+
+        // Resolve with the newly added itemData
+        resolve(itemData);
+    });
+}
+
+function getItemsByCategory(category) {
+    return new Promise((resolve, reject) => {
+        const filteredItems = items.filter(item => item.category === Number(category));
+        if (filteredItems.length > 0) {
+            resolve(filteredItems);
+        } else {
+            reject('No results returned');
+        }
+    });S
+}
+
+
+function getItemsByMinDate(minDateStr) {
+    return new Promise((resolve, reject) => {
+        const dateFilter = new Date(minDateStr);
+        const filteredItems = items.filter(item => new Date(item.postDate) >= dateFilter);
+        filteredItems.length > 0 ? resolve(filteredItems) : reject('No items found with this minimum date');
+    });
+}
+
+function getItemById(id) {
+    return new Promise((resolve, reject) => {
+        const item = items.find(item => item.id === parseInt(id));
+        item ? resolve(item) : reject('Item not found');
+    });
+}
 
 module.exports = {
     initialize,
     getAllItems,
     getPublishedItems,
-    getCategories
+    getCategories,
+    addItem,
+    getItemsByCategory,
+    getItemsByMinDate,
+    getItemById // Ensure this is added to exports
 };
