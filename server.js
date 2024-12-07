@@ -1,10 +1,10 @@
 /*********************************************************************************
-*  WEB322 – Assignment 03
+*  WEB322 – Assignment 05
 *  I declare that this assignment is my own work in accordance with Seneca  Academic Policy.  No part 
 *  of this assignment has been copied manually or electronically from any other source 
 *  (including 3rd party web sites) or distributed to other students.
 * 
-*  Name: ___Shristi Kunwar____ Student ID: __115687238__ Date: ___1/11/2024___
+*  Name: ___Shristi Kunwar____ Student ID: __115687238__ Date: ___6/12/2024___
 *
 *  Web App URL: http://shristi.quiblix.ca
 * 
@@ -21,9 +21,7 @@ const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
 const expressEjsLayouts = require('express-ejs-layouts');
 
-// Default layout
 
-// Cloudinary configuration
 cloudinary.config({
     cloud_name: 'doxlmyf70',
     api_key: '431382676145445',
@@ -46,6 +44,8 @@ app.use(function (req, res, next) {
     next();
 });
 
+app.use(express.urlencoded({ extended: true }));
+
 
 
 const PORT = process.env.PORT || 8080;
@@ -64,6 +64,14 @@ storeService.initialize()
         process.exit(1);
     });
 // Routes
+
+app.locals.formatDate = function (dateObj) {
+    let year = dateObj.getFullYear();
+    let month = (dateObj.getMonth() + 1).toString();
+    let day = dateObj.getDate().toString();
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+};
+
 app.get('/', (req, res) => {
     res.redirect('/shop');
 });
@@ -102,23 +110,17 @@ app.get('/shop', async (req, res) => {
 // New shop/:id route
 app.get('/shop/:id', async (req, res) => {
     try {
-        // Get the post by id
         let item = await storeService.getItemById(req.params.id);
 
-        // Get the published items
         let items = [];
         if (req.query.category) {
-            // If category was provided, get items from that category
             items = await storeService.getPublishedItemsByCategory(req.query.category);
         } else {
-            // Otherwise get all published items
             items = await storeService.getPublishedItems();
         }
 
-        // Get the categories
         let categories = await storeService.getCategories();
 
-        // Render the "shop" view with all of our data
         res.render("shop", {
             data: {
                 item: item, // specific item for this route
@@ -137,7 +139,6 @@ app.get('/shop/:id', async (req, res) => {
     }
 });
 
-
 app.get('/items', async (req, res) => {
     try {
         const { category, minDate } = req.query;
@@ -151,11 +152,16 @@ app.get('/items', async (req, res) => {
             items = await storeService.getAllItems();
         }
 
-        res.render("items", { items: items });
+        if (items && items.length > 0) {
+            res.render("items", { items: items });
+        } else {
+            res.render("items", { message: "no results" });
+        }
     } catch (err) {
         res.render("items", { message: "no results" });
     }
 });
+
 
 app.get('/item/:id', (req, res) => {
     const { id } = req.params;
@@ -168,14 +174,51 @@ app.get('/item/:id', (req, res) => {
 app.get('/categories', async (req, res) => {
     try {
         const categories = await storeService.getCategories();
-        res.render("categories", { categories: categories });
+
+        // Check if categories exist and have length
+        if (categories && categories.length > 0) {
+            res.render("categories", { categories: categories });
+        } else {
+            res.render("categories", { message: "no results" });
+        }
     } catch (err) {
         res.render("categories", { message: "no results" });
     }
 });
 
+app.get('/categories/add', (req, res) => {
+    res.render('addCategory');
+});
+
+app.post('/categories/add', (req, res) => {
+    storeService.addCategory(req.body)
+        .then(() => {
+            res.redirect('/categories');
+        })
+        .catch((err) => {
+            res.status(500).send("Unable to Add Category");
+        });
+});
+
+app.get('/categories/delete/:id', (req, res) => {
+    storeService.deleteCategoryById(req.params.id)
+        .then(() => {
+            res.redirect('/categories');
+        })
+        .catch(() => {
+            res.status(500).send("Unable to Remove Category / Category not found");
+        });
+});
+
+
 app.get('/items/add', (req, res) => {
-    res.render('addItem');
+    storeService.getCategories()
+        .then((data) => {
+            res.render('addItem', { categories: data });
+        })
+        .catch(() => {
+            res.render('addItem', { categories: [] });
+        });
 });
 
 app.post('/items/add', upload.single("featureImage"), (req, res) => {
@@ -214,7 +257,6 @@ app.post('/items/add', upload.single("featureImage"), (req, res) => {
     function processItem(imageUrl) {
         req.body.featureImage = imageUrl;
 
-        // Call the addItem function and handle promise resolution
         storeService.addItem(req.body).then((newItem) => {
             res.redirect('/items'); // Redirect to items listing after adding
         }).catch(err => {
@@ -224,6 +266,15 @@ app.post('/items/add', upload.single("featureImage"), (req, res) => {
     }
 });
 
+app.get('/items/delete/:id', (req, res) => {
+    storeService.deleteItemById(req.params.id)
+        .then(() => {
+            res.redirect('/items');
+        })
+        .catch(() => {
+            res.status(500).send("Unable to Remove Item / Item not found");
+        });
+});
 
 app.use((req, res) => {
     res.status(404).render('404');
