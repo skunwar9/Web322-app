@@ -1,16 +1,17 @@
 /*********************************************************************************
-*  WEB322 – Assignment 05
-*  I declare that this assignment is my own work in accordance with Seneca  Academic Policy.  No part 
-*  of this assignment has been copied manually or electronically from any other source 
+*  WEB322 – Assignment 06
+*  I declare that this assignment is my own work in accordance with Seneca Academic Policy.  
+*  No part of this assignment has been copied manually or electronically from any other source
 *  (including 3rd party web sites) or distributed to other students.
 * 
-*  Name: ___Shristi Kunwar____ Student ID: __115687238__ Date: ___6/12/2024___
+*  Name: ___Shristi Kunwar____ Student ID: __115687238__ Date: ___12/11/2024___
 *
 *  Web App URL: http://shristi.quiblix.ca
 * 
 *  GitHub Repository URL: https://github.com/skunwar9/Web322-app
 *
-********************************************************************************/ 
+********************************************************************************/
+
 const Sequelize = require('sequelize');
 
 var sequelize = new Sequelize('postgres', 'postgres', 'XujNlYzMUtbttWf7', {

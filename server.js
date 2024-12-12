@@ -1,10 +1,10 @@
 /*********************************************************************************
-*  WEB322 – Assignment 05
-*  I declare that this assignment is my own work in accordance with Seneca  Academic Policy.  No part 
-*  of this assignment has been copied manually or electronically from any other source 
+*  WEB322 – Assignment 06
+*  I declare that this assignment is my own work in accordance with Seneca Academic Policy.  
+*  No part of this assignment has been copied manually or electronically from any other source
 *  (including 3rd party web sites) or distributed to other students.
 * 
-*  Name: ___Shristi Kunwar____ Student ID: __115687238__ Date: ___6/12/2024___
+*  Name: ___Shristi Kunwar____ Student ID: __115687238__ Date: ___12/11/2024___
 *
 *  Web App URL: http://shristi.quiblix.ca
 * 
@@ -12,16 +12,17 @@
 *
 ********************************************************************************/
 
-
 const express = require('express');
 const path = require('path');
 const storeService = require('./store-service');
+const authData = require('./auth-service');
+const clientSessions = require('client-sessions');
 const multer = require("multer");
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
 const expressEjsLayouts = require('express-ejs-layouts');
 
-
+// Cloudinary Config
 cloudinary.config({
     cloud_name: 'doxlmyf70',
     api_key: '431382676145445',
@@ -32,10 +33,32 @@ cloudinary.config({
 const app = express();
 const upload = multer();
 
+// View Engine Setup
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(expressEjsLayouts);
 app.set('layout', 'layouts/main');
+
+// Client Sessions Setup
+app.use(clientSessions({
+    cookieName: "session",
+    secret: "web322_assignment6_secret",
+    duration: 2 * 60 * 1000, // 2 minutes
+    activeDuration: 1000 * 60 // 1 minute
+}));
+
+app.use(function (req, res, next) {
+    res.locals.session = req.session;
+    next();
+});
+
+function ensureLogin(req, res, next) {
+    if (!req.session.user) {
+        res.redirect('/login');
+    } else {
+        next();
+    }
+}
 
 app.use(function (req, res, next) {
     let route = req.path.substring(1);
@@ -45,25 +68,17 @@ app.use(function (req, res, next) {
 });
 
 app.use(express.urlencoded({ extended: true }));
-
-
-
-const PORT = process.env.PORT || 8080;
-
-
 app.use(express.static(path.join(__dirname, 'public')));
 
 storeService.initialize()
-    .then(() => {
+    .then(authData.initialize)
+    .then(function () {
         app.listen(process.env.PORT || 8080, () => {
             console.log("Express http server listening on port", process.env.PORT || 8080);
         });
-    })
-    .catch((err) => {
-        console.error('Error initializing data:', err);
-        process.exit(1);
+    }).catch(function (err) {
+        console.log("unable to start server: " + err);
     });
-// Routes
 
 app.locals.formatDate = function (dateObj) {
     let year = dateObj.getFullYear();
@@ -72,6 +87,7 @@ app.locals.formatDate = function (dateObj) {
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 };
 
+// Public Routes (No Login Required)
 app.get('/', (req, res) => {
     res.redirect('/shop');
 });
@@ -88,26 +104,12 @@ app.get('/shop', async (req, res) => {
         } else {
             items = await storeService.getPublishedItems();
         }
-
         const categories = await storeService.getCategories();
-
-        res.render("shop", {
-            data: {
-                items: items,
-                categories: categories
-            }
-        });
+        res.render("shop", { data: { items: items, categories: categories } });
     } catch (err) {
-        res.render("shop", {
-            data: {
-                message: "no results",
-                categories: []
-            }
-        });
+        res.render("shop", { data: { message: "no results", categories: [] } });
     }
 });
-
-// New shop/:id route
 app.get('/shop/:id', async (req, res) => {
     try {
         let item = await storeService.getItemById(req.params.id);
@@ -123,7 +125,7 @@ app.get('/shop/:id', async (req, res) => {
 
         res.render("shop", {
             data: {
-                item: item, // specific item for this route
+                item: item, 
                 items: items,
                 categories: categories
             }
@@ -138,12 +140,11 @@ app.get('/shop/:id', async (req, res) => {
         });
     }
 });
-
-app.get('/items', async (req, res) => {
+// Protected Routes (Login Required)
+app.get('/items', ensureLogin, async (req, res) => {
     try {
         const { category, minDate } = req.query;
         let items;
-
         if (category) {
             items = await storeService.getItemsByCategory(category);
         } else if (minDate) {
@@ -151,67 +152,13 @@ app.get('/items', async (req, res) => {
         } else {
             items = await storeService.getAllItems();
         }
-
-        if (items && items.length > 0) {
-            res.render("items", { items: items });
-        } else {
-            res.render("items", { message: "no results" });
-        }
+        res.render("items", { items: items });
     } catch (err) {
         res.render("items", { message: "no results" });
     }
 });
 
-
-app.get('/item/:id', (req, res) => {
-    const { id } = req.params;
-    storeService.getItemById(id)
-        .then(item => res.json(item))
-        .catch(err => res.status(500).json({ message: err }));
-});
-
-
-app.get('/categories', async (req, res) => {
-    try {
-        const categories = await storeService.getCategories();
-
-        // Check if categories exist and have length
-        if (categories && categories.length > 0) {
-            res.render("categories", { categories: categories });
-        } else {
-            res.render("categories", { message: "no results" });
-        }
-    } catch (err) {
-        res.render("categories", { message: "no results" });
-    }
-});
-
-app.get('/categories/add', (req, res) => {
-    res.render('addCategory');
-});
-
-app.post('/categories/add', (req, res) => {
-    storeService.addCategory(req.body)
-        .then(() => {
-            res.redirect('/categories');
-        })
-        .catch((err) => {
-            res.status(500).send("Unable to Add Category");
-        });
-});
-
-app.get('/categories/delete/:id', (req, res) => {
-    storeService.deleteCategoryById(req.params.id)
-        .then(() => {
-            res.redirect('/categories');
-        })
-        .catch(() => {
-            res.status(500).send("Unable to Remove Category / Category not found");
-        });
-});
-
-
-app.get('/items/add', (req, res) => {
+app.get('/items/add', ensureLogin, (req, res) => {
     storeService.getCategories()
         .then((data) => {
             res.render('addItem', { categories: data });
@@ -221,7 +168,7 @@ app.get('/items/add', (req, res) => {
         });
 });
 
-app.post('/items/add', upload.single("featureImage"), (req, res) => {
+app.post('/items/add', ensureLogin, upload.single("featureImage"), (req, res) => {
     if (req.file) {
         let streamUpload = (req) => {
             return new Promise((resolve, reject) => {
@@ -240,15 +187,11 @@ app.post('/items/add', upload.single("featureImage"), (req, res) => {
 
         async function upload(req) {
             let result = await streamUpload(req);
-            console.log(result);
             return result;
         }
 
         upload(req).then((uploaded) => {
             processItem(uploaded.url);
-        }).catch(err => {
-            console.error("Upload failed:", err);
-            res.status(500).send("Upload Error");
         });
     } else {
         processItem("");
@@ -256,17 +199,15 @@ app.post('/items/add', upload.single("featureImage"), (req, res) => {
 
     function processItem(imageUrl) {
         req.body.featureImage = imageUrl;
-
-        storeService.addItem(req.body).then((newItem) => {
-            res.redirect('/items'); // Redirect to items listing after adding
-        }).catch(err => {
-            console.error("Error adding item:", err);
-            res.status(500).send("Item Creation Error");
+        storeService.addItem(req.body).then(() => {
+            res.redirect('/items');
+        }).catch((err) => {
+            res.status(500).send("Error adding item");
         });
     }
 });
 
-app.get('/items/delete/:id', (req, res) => {
+app.get('/items/delete/:id', ensureLogin, (req, res) => {
     storeService.deleteItemById(req.params.id)
         .then(() => {
             res.redirect('/items');
@@ -276,7 +217,97 @@ app.get('/items/delete/:id', (req, res) => {
         });
 });
 
+app.get('/categories', ensureLogin, async (req, res) => {
+    try {
+        const categories = await storeService.getCategories();
+        if (categories && categories.length > 0) {
+            res.render("categories", { categories: categories });
+        } else {
+            res.render("categories", { message: "no results" });
+        }
+    } catch (err) {
+        res.render("categories", { message: "no results" });
+    }
+});
+
+app.get('/categories/add', ensureLogin, (req, res) => {
+    res.render('addCategory');
+});
+
+app.post('/categories/add', ensureLogin, (req, res) => {
+    storeService.addCategory(req.body)
+        .then(() => {
+            res.redirect('/categories');
+        })
+        .catch((err) => {
+            res.status(500).send("Unable to Add Category");
+        });
+});
+
+app.get('/categories/delete/:id', ensureLogin, (req, res) => {
+    storeService.deleteCategoryById(req.params.id)
+        .then(() => {
+            res.redirect('/categories');
+        })
+        .catch(() => {
+            res.status(500).send("Unable to Remove Category / Category not found");
+        });
+});
+
+
+app.get('/login', (req, res) => {
+    res.render('login');
+});
+
+app.get('/register', (req, res) => {
+    res.render('register');
+});
+
+app.post('/register', (req, res) => {
+    authData.registerUser(req.body)
+        .then(() => {
+            res.render('register', {
+                successMessage: "User created"
+            });
+        })
+        .catch((err) => {
+            res.render('register', {
+                errorMessage: err,
+                userName: req.body.userName
+            });
+        });
+});
+
+app.post('/login', (req, res) => {
+    req.body.userAgent = req.get('User-Agent');
+
+    authData.checkUser(req.body)
+        .then((user) => {
+            req.session.user = {
+                userName: user.userName,
+                email: user.email,
+                loginHistory: user.loginHistory
+            };
+            res.redirect('/items');
+        })
+        .catch((err) => {
+            res.render('login', {
+                errorMessage: err,
+                userName: req.body.userName
+            });
+        });
+});
+
+app.get('/logout', (req, res) => {
+    req.session.reset();
+    res.redirect('/');
+});
+
+app.get('/userHistory', ensureLogin, (req, res) => {
+    res.render('userHistory');
+});
+
+
 app.use((req, res) => {
     res.status(404).render('404');
 });
-
